@@ -1,0 +1,68 @@
+
+# ========== НАСТРОЙКИ Pytest ==========
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+norecursedirs = [".*", "build", "dist", "node_modules", "venv"]
+
+addopts = [
+    "--verbose",
+    "--strict-markers",
+    "--tb=short",
+    "--show-capture=no",
+    "--disable-warnings",
+    "-p", "no:warnings",
+]
+
+markers = [
+    "ui: Тесты пользовательского интерфейса",
+    "smoke: Быстрые smoke-тесты",  
+    "auth: Тесты авторизации",
+]
+
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# ========== НАСТРОЙКИ Playwright ==========
+[tool.pytest.playwright]
+browser = ["chromium"]
+headed = true
+viewport = {width = 1280, height = 1024}
+trace = "on-first-retry"
+screenshot = "only-on-failure"
+
+# ========== НАСТРОЙКИ Allure ==========
+[tool.pytest.allure]
+report_dir = "reports/allure-results"
+clean_report_dir = true
+
+# ========== НАСТРОЙКИ Black ==========
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+# ========== НАСТРОЙКИ isort ==========
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+known_first_party = ["tests"]
+
+# ========== НАСТРОЙКИ mypy ==========
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pytest",
+    "playwright",
+    "allure.*",
+]
+ignore_missing_imports = true

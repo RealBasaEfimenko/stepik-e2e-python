@@ -1,0 +1,24 @@
+playwright>=1.56.0
+pytest>=9.0.1
+pytest-playwright>=0.7.1
+python-dotenv>=1.2.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Пакеты для разработки
+pytest-html>=4.1.1
+pytest-xdist>=3.5.0
+pytest-rerunfailures>=16.0
+pytest-timeout>=2.2.0
+pytest-order>=1.1.0
+pytest-asyncio>=1.2.0
+
+# Allure отчеты
+allure-pytest>=2.13.2
+allure-python-commons>=2.13.2
+
+# Инструменты код-стайла
+black>=26.1.0
+flake8>=7.0.0
+mypy>=1.8.0
+isort>=7.0.0
