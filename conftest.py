@@ -1,6 +1,9 @@
 import pytest
 import structlog
 import os
+import allure
+from allure_commons.types import AttachmentType
+from allure_commons._allure import StepContext
 from typing import Generator
 from dotenv import load_dotenv
 from playwright.sync_api import Page, Browser, Playwright, sync_playwright, BrowserContext
@@ -23,6 +26,31 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 logger = structlog.get_logger(__name__)
+
+
+def pytest_configure(config):
+    """Конфигурация Allure для pytest."""
+    # Регистрируем метки
+    config.addinivalue_line("markers", "ui: UI тесты")
+    config.addinivalue_line("markers", "smoke: Smoke тесты")
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Собираем информацию о тесте для Allure."""
+    outcome = yield
+    report = outcome.get_result()
+
+    # Прикрепляем дополнительные данные при падении теста
+    if report.when == "call" and report.failed:
+        # Получаем page из фикстуры, если есть
+        page = item.funcargs.get("page")
+        if page:
+            # Скриншот при падении
+            screenshot = page.screenshot(full_page=True)
+            allure.attach(
+                screenshot, name="screenshot_on_failure", attachment_type=AttachmentType.PNG
+            )
 
 
 @pytest.fixture(scope="session")
