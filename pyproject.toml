@@ -1,6 +1,6 @@
 
 # ========== НАСТРОЙКИ Pytest ==========
-[tool.pytest.ini_options]
+[tool.pytest]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -20,7 +20,7 @@ markers = [
     "ui: Тесты пользовательского интерфейса",
     "smoke: Быстрые smoke-тесты",  
     "auth: Тесты авторизации",
-]
+]   
 
 log_cli = true
 log_cli_level = "INFO"

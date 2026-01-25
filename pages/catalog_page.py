@@ -1,4 +1,5 @@
 import structlog
+import allure
 from playwright.sync_api import Locator
 from typing import Optional
 from .base_page import BasePage
@@ -38,6 +39,7 @@ class CatalogPage(BasePage):
         )
         return is_search_visible and is_catalog_url
 
+    @allure.step("Поиск курсов по запросу: {query}")
     def search_courses(self, query: str):
         """Поиск курсов по запросу
 
@@ -55,3 +57,7 @@ class CatalogPage(BasePage):
         self.wait_for_url(f"**q={query}*", timeout=15000)
 
         self.log.info("Поиск выполнен", query=query, current_url=self.get_current_url())
+
+        from .search_page import SearchPage
+
+        return SearchPage(self.page)

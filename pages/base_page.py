@@ -1,5 +1,3 @@
-from ast import pattern
-from annotated_types import T
 import structlog
 from playwright.sync_api import Page, Locator, Response
 from typing import Optional
@@ -49,7 +47,7 @@ class BasePage:
             locator : Локатор playwright
             element_description (str): Человекочитаемое описание элемента для логов
         """
-        self.log.info(f"Клик по элементу", {element_description})
+        self.log.info(f"Клик по элементу, {element_description}")
 
         locator.click(timeout=self.timeout)
         self._wait_for_all_requests()
