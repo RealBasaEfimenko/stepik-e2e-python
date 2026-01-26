@@ -50,5 +50,3 @@ E2E-тест, автоматизирующий сценарий поиска б�
 2. **Запуск E2E-теста**
 3. **Генерация Allure-отчёта**
 4. **Публикация отчёта как артефакт**
-
-[![CI/CD Status](https://github.com/ВАШ_ЛОГИН/stepik-e2e-python/actions/workflows/e2e.yaml/badge.svg)](https://github.com/ВАШ_ЛОГИН/stepik-e2e-python/actions/workflows/e2e.yaml)
