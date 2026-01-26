@@ -44,25 +44,6 @@ E2E-тест, автоматизирующий сценарий поиска б�
     allure serve reports/allure-results
     ```
 
-## 📁 Структура проекта
-stepik-e2e-python/
-├── .github/workflows/          # GitHub Actions CI/CD
-│   └── e2e.yaml                # Конфигурация пайплайна
-├── pages/                      # Реализация Page Object Model
-│   ├── base_page.py           # Базовый класс с логированием
-│   ├── login_page.py          # Страница авторизации
-│   ├── catalog_page.py        # Главная страница с поиском
-│   └── search_page.py         # Страница результатов с фильтрами
-├── tests/                      # Автотесты
-│   ├── test_search_free_courses.py    # Основной E2E-тест
-├── docs/                       # Документация
-│   └── images/                 # Скриншоты
-├── .env.example                # Пример переменных окружения
-├── requirements.txt            # Зависимости Python
-├── pyproject.toml              # Конфигурация линтеров и pytest
-├── README.md                   # Документация
-└──conftest.py                  # Фикстуры pytest
-
 ## 🔄 Интеграция с CI/CD (GitHub Actions)
 При пуше в ветки `main` или `master` автоматически запускается пайплайн:
 1. **Установка зависимостей** (Python, браузеры Playwright)
