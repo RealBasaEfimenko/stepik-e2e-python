@@ -30,6 +30,9 @@ jobs:
       - name: Run tests
         run: |
           pytest tests --alluredir=allure-results -v
+        env:
+          STEPIK_LOGIN: ${{secrets.STEPIK_LOGIN}}
+          STEPIK_PASSWORD: ${{secrets.STEPIK_PASSWORD}}
 
       - name: Upload Allure results
         if: always()
