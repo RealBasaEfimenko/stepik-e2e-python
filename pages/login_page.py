@@ -56,32 +56,29 @@ class LoginPage(BasePage):
         self.enter_password(password)
         self.submit_login()
 
-        # 2. Ждем редиректа после авторизации
-        self.log.info("Ожидание завершения авторизации...")
+        # 2. Ждем редиректа после авторизации (не более 15 сек)
         try:
             self.page.wait_for_url("**/catalog", timeout=15000)
+            self.log.info("Редирект на каталог произошел автоматически")
         except Exception as e:
-            # Редирект не обязателен — Stepik иногда остается на той же странице с параметром auth
-            # Логируем для отладки, но продолжаем принудительный переход
             self.log.warning(
-                "Редирект не произошел автоматически", error=str(e), current_url=self.page.url
+                "Редирект не произошел автоматически, принудительно переходим", error=str(e)
             )
 
-        # 3. Принудительно очищаем URL от auth=login с увеличенным таймаутом для CI
-        self.log.info("Принудительная очистка состояния авторизации")
+        # 3. Принудительно переходим на чистый каталог (без auth=login)
+        # ВАЖНО: используем domcontentloaded вместо networkidle для CI
         clean_catalog_url = "https://stepik.org/catalog"
-
-        # ВАЖНО: для CI используем domcontentloaded вместо networkidle (быстрее)
         self.page.goto(clean_catalog_url, wait_until="domcontentloaded", timeout=60000)
-        self.page.wait_for_load_state("networkidle", timeout=30000)
 
-        # 4. Проверяем, что мы на чистом каталоге
-        current_url = self.get_current_url()
-        if "auth=login" in current_url:
-            self.log.error(f"Ошибка: auth=login все еще в URL: {current_url}")
-            self.page.context.clear_cookies()
-            self.page.goto(clean_catalog_url, wait_until="domcontentloaded", timeout=60000)
-
+        # 4. Ждем появления ключевого элемента каталога (поисковой строки) вместо networkidle
+        try:
+            self.page.get_by_placeholder("Название курса, автор или предмет").wait_for(
+                state="visible", timeout=15000
+            )
+            self.log.info("Каталог загружен (поисковая строка видна)")
+        except Exception as e:
+            self.log.error("Поисковая строка не появилась", error=str(e))
+            raise
         final_url = self.get_current_url()
         self.log.info("Авторизация завершена", final_url=final_url)
 
