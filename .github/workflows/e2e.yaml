@@ -22,31 +22,29 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -V
           pip install --upgrade pip
           pip install -r requirements.txt
           playwright install --with-deps chromium
 
       - name: Run tests
-        run: |
-          pytest tests -v
+        run: pytest tests -v --timeout=120
         env:
           STEPIK_LOGIN: ${{ secrets.STEPIK_LOGIN }}
           STEPIK_PASSWORD: ${{ secrets.STEPIK_PASSWORD }}
 
-      - name: Upload Allure results
-        if: always()
+      - name: Upload Allure results (always)
+        if: always() # ВАЖНО: сохраняем даже при падении
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: allure-results
+          path: allure-results/
           retention-days: 7
 
   allure-report:
     name: Generate Allure report
     needs: tests
     runs-on: ubuntu-latest
-    if: always() # Генерировать отчет даже если тесты упали
+    if: always() # Генерируем отчет всегда
 
     steps:
       - name: Download Allure results
@@ -60,12 +58,9 @@ jobs:
           wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
           tar -zxf allure-2.27.0.tgz -C /opt/
           sudo ln -sf /opt/allure-2.27.0/bin/allure /usr/local/bin/allure
-          allure --version
 
       - name: Generate Allure report
-        run: |
-          allure generate allure-results -o allure-report --clean
-          echo "Allure report generated in allure-report/"
+        run: allure generate allure-results -o allure-report --clean
 
       - name: Upload Allure report
         uses: actions/upload-artifact@v4
@@ -73,15 +68,3 @@ jobs:
           name: allure-report
           path: allure-report
           retention-days: 30
-
-      - name: Comment PR with Allure link (optional)
-        if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ E2E тесты упали. Скачайте отчет Allure в артефактах workflow.'
-            })

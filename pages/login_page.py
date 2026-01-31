@@ -47,9 +47,7 @@ class LoginPage(BasePage):
 
     @allure.step("Авторизация пользователя {email}")
     def login(self, email: str, password: str) -> None:
-        """
-        Полный процесс авторизации с принудительной очисткой состояния.
-        """
+        """Полный процесс авторизации с принудительной очисткой состояния."""
         self.log.info("Начало процесса авторизации", email=email[:3] + "***")
 
         # 1. Открываем и заполняем форму
@@ -58,32 +56,31 @@ class LoginPage(BasePage):
         self.enter_password(password)
         self.submit_login()
 
-        # 2. Ждем редиректа после авторизации (вместо sleep)
+        # 2. Ждем редиректа после авторизации
         self.log.info("Ожидание завершения авторизации...")
         try:
-            self.page.wait_for_url("**/catalog", timeout=10000)
-        except:
-            pass  # Иногда редиректа нет, проверим через URL далее
+            self.page.wait_for_url("**/catalog", timeout=15000)
+        except Exception as e:
+            # Редирект не обязателен — Stepik иногда остается на той же странице с параметром auth
+            # Логируем для отладки, но продолжаем принудительный переход
+            self.log.warning(
+                "Редирект не произошел автоматически", error=str(e), current_url=self.page.url
+            )
 
-        # 3. Принудительно очищаем URL от auth=login
+        # 3. Принудительно очищаем URL от auth=login с увеличенным таймаутом для CI
         self.log.info("Принудительная очистка состояния авторизации")
         clean_catalog_url = "https://stepik.org/catalog"
-        self.navigate(clean_catalog_url)
 
-        # Ждем полной загрузки страницы каталога
-        self.page.wait_for_load_state("networkidle")
+        # ВАЖНО: для CI используем domcontentloaded вместо networkidle (быстрее)
+        self.page.goto(clean_catalog_url, wait_until="domcontentloaded", timeout=60000)
+        self.page.wait_for_load_state("networkidle", timeout=30000)
 
         # 4. Проверяем, что мы на чистом каталоге
         current_url = self.get_current_url()
-
         if "auth=login" in current_url:
-            self.log.error(f"Ошибка: auth=login все еще в URL после очистки: {current_url}")
-
-            # Крайний случай: очистка cookies и повторная загрузка
-            self.log.info("Попытка очистки cookies...")
+            self.log.error(f"Ошибка: auth=login все еще в URL: {current_url}")
             self.page.context.clear_cookies()
-            self.navigate(clean_catalog_url)
-            self.page.wait_for_load_state("networkidle")
+            self.page.goto(clean_catalog_url, wait_until="domcontentloaded", timeout=60000)
 
         final_url = self.get_current_url()
         self.log.info("Авторизация завершена", final_url=final_url)
