@@ -24,7 +24,7 @@ class LoginPage(BasePage):
 
     def open(self) -> "LoginPage":
         """Открыть страницу авторизации"""
-        self.log.info("Открытые страницы авторизации")
+        self.log.info("Открытие страницы авторизации")
         login_url = "https://stepik.org/catalog?auth=login"
         self.navigate(login_url)
 
@@ -39,7 +39,6 @@ class LoginPage(BasePage):
 
     def enter_password(self, password: str) -> "LoginPage":
         """Ввести пароль"""
-
         self.fill(self.password_field, password, "Поле пароль")
         return self
 
@@ -59,19 +58,20 @@ class LoginPage(BasePage):
         self.enter_password(password)
         self.submit_login()
 
-        # 2. Даем время на обработку логина (важно!)
-        self.page.wait_for_timeout(3000)  # Ждем 3 секунды
+        # 2. Ждем редиректа после авторизации (вместо sleep)
+        self.log.info("Ожидание завершения авторизации...")
+        try:
+            self.page.wait_for_url("**/catalog", timeout=10000)
+        except:
+            pass  # Иногда редиректа нет, проверим через URL далее
 
-        # 3. ПРИНУДИТЕЛЬНО очищаем состояние Stepik
+        # 3. Принудительно очищаем URL от auth=login
         self.log.info("Принудительная очистка состояния авторизации")
-
-        # Вариант А: Простой и надежный - полная перезагрузка каталога
         clean_catalog_url = "https://stepik.org/catalog"
         self.navigate(clean_catalog_url)
 
-        # Ждем полной загрузки и исчезновения любых индикаторов загрузки
+        # Ждем полной загрузки страницы каталога
         self.page.wait_for_load_state("networkidle")
-        self.page.wait_for_timeout(2000)  # Дополнительная пауза
 
         # 4. Проверяем, что мы на чистом каталоге
         current_url = self.get_current_url()
@@ -111,7 +111,7 @@ class LoginPage(BasePage):
             # Если элемент не найден или не видим
             self.log.error(f"Ошибка при проверке авторизации: {e}")
 
-            # Резервная проверка по URL и другим элементам
+            # Резервная проверка по URL
             current_url = self.get_current_url()
             self.log.info(f"Резервная проверка. Текущий URL: {current_url}")
 

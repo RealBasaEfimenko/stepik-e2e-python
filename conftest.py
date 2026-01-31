@@ -3,7 +3,6 @@ import structlog
 import os
 import allure
 from allure_commons.types import AttachmentType
-from allure_commons._allure import StepContext
 from typing import Generator
 from dotenv import load_dotenv
 from playwright.sync_api import Page, Browser, Playwright, sync_playwright, BrowserContext
@@ -110,7 +109,7 @@ def credentials():
     password = os.getenv("STEPIK_PASSWORD")
 
     if not login or not password:
-        logger.erroe("Не найдены учетные данные в .env файле")
+        logger.error("Не найдены учетные данные в .env файле")
         raise ValueError("Добавьте STEPIK_LOGIN и STEPIK_PASSWORD в .env файл")
     logger.info("Учетные данные загружены", login=login[:3] + "***")
     return {"login": login, "password": password}
@@ -118,4 +117,4 @@ def credentials():
 
 def pytest_sessionfinish(exitstatus):
     """Хук для логгирования завершения тестовой сессии"""
-    logger.info("Тестовая сессия заверешена", exitstatus=exitstatus)
+    logger.info("Тестовая сессия завершена", exitstatus=exitstatus)

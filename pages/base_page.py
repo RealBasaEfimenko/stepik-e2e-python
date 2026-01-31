@@ -1,4 +1,5 @@
 import structlog
+import os
 from playwright.sync_api import Page, Locator, Response
 from typing import Optional
 
@@ -13,7 +14,7 @@ class BasePage:
 
         Args:
             page (Page): Экземпляр страницы Playwright
-            timeout (float, optional): Таймаутожидания по умолчанию. Defaults to 30000
+            timeout (float, optional): Таймаут ожидания по умолчанию. Defaults to 30000
         """
         self.page = page
         self.timeout = timeout
@@ -72,7 +73,7 @@ class BasePage:
 
     def get_current_url(self) -> str:
         """
-        Получить текущий URL с лоигрованием
+        Получить текущий URL с логированием
 
         :return: URL страницы
         """
@@ -80,14 +81,14 @@ class BasePage:
         self.log.debug("Текущий URL", url=url)
         return url
 
-    def wait_for_url(self, url_pattern: str, timeout: float) -> None:
+    def wait_for_url(self, url_pattern: str, timeout: Optional[float]) -> None:
         """
         Ожидание перехода на URL по паттерну
 
         :param url_pattern: Паттерн URL для ожидания(может быть частью URL)
         :param timeout: Кастомный таймаут
         """
-        timeout = timeout or self.timeout
+        timeout = self.timeout if timeout is None else timeout
         self.log.info("Ожидание URL", pattern=url_pattern)
 
         try:
@@ -117,5 +118,6 @@ class BasePage:
 
     def take_screenshot(self, name: str) -> None:
         screenshot_path = f"screenshots/{name}.png"
+        os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
         self.page.screenshot(path=screenshot_path)
         self.log.info("Скриншот сохранен", path=screenshot_path)

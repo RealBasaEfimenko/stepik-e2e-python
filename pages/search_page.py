@@ -1,7 +1,6 @@
 import structlog
-import time
 import allure
-from playwright.sync_api import Locator
+from playwright.sync_api import Locator, Page
 from typing import Optional
 from .base_page import BasePage
 
@@ -57,7 +56,7 @@ class SearchPage(BasePage):
         # Ожидаем применения фильтра (динамическая загрузка)
         self._wait_for_filter_applied()
 
-        # ВАЖНО: ДОЖДАТЬСЯ ПОЯВЛЕНИЯ КАРТОЧЕК
+        # Дожидаемся появления карточек
         self._wait_for_courses_to_load()
 
         self.log.info("Фильтр 'Бесплатно' применен", current_url=self.get_current_url())
@@ -71,9 +70,7 @@ class SearchPage(BasePage):
         # Ждем обновления URL
         self.wait_for_url("**free=true**", timeout=15000)
 
-        # Минимальная пауза для стабильности динамического контента
-        time.sleep(1)
-        self._wait_for_all_requests()
+        self.page.wait_for_load_state("networkidle")
 
         self.log.debug("Фильтр успешно применен")
 
@@ -85,14 +82,14 @@ class SearchPage(BasePage):
             # Ждем появления хотя бы одной карточки
             self.page.wait_for_selector(
                 "a.catalog-rich-card__link-wrapper",
-                state="attached",  # Элемент появился в DOM
+                state="attached",
                 timeout=timeout,
             )
 
             # Дополнительно: ждем, пока карточки станут видимыми
             self.page.wait_for_selector(
                 "a.catalog-rich-card__link-wrapper",
-                state="visible",  # Элемент видим на экране
+                state="visible",
                 timeout=5000,
             )
 
@@ -102,30 +99,37 @@ class SearchPage(BasePage):
 
         except Exception as e:
             self.log.error(f"Ошибка при ожидании карточек курсов: {e}")
-            # Можно сделать скриншот для отладки
             self.take_screenshot("courses_not_loaded")
             raise
 
     @allure.step("Открытие первой карточки курса")
-    def open_first_course(self) -> None:
-        """Открыть первую карточку курса (упрощенный вариант для демо-проекта)."""
+    def open_first_course(self) -> Page:
+        """Открыть первую карточку курса в новой вкладке и вернуть страницу."""
         self.log.info("Открытие первого курса")
 
-        # 1. Находим первую карточку
-        first_card = self.page.locator("a.catalog-rich-card__link-wrapper").first
-
-        if first_card.count() == 0:
+        # 1. Проверяем наличие карточек перед кликом
+        cards = self.page.locator("a.catalog-rich-card__link-wrapper")
+        if cards.count() == 0:
             self.log.error("Нет доступных курсов для открытия")
             raise ValueError("На странице нет карточек курсов")
 
-        # 2. Запоминаем текущий URL (для логов)
+        # 2. Берем первую карточку и ждем её видимости
+        first_card = cards.first
+        first_card.wait_for(state="visible", timeout=10000)
+
+        # 3. Запоминаем текущий URL (для логов)
         url_before = self.get_current_url()
+        self.log.info(f"URL до клика: {url_before}")
 
-        # 3. Кликаем (откроется новая вкладка)
-        self.click(first_card, "Первая карточка курса")
+        # 4. Кликаем с ожиданием новой вкладки (target="_blank")
+        with self.page.context.expect_page() as new_page_info:
+            self.click(first_card, "Первая карточка курса")
 
-        # 4. Даем время на открытие
-        self.page.wait_for_timeout(2000)
+        # 5. Получаем новую страницу и ждем загрузки
+        new_page = new_page_info.value
+        new_page.wait_for_load_state("domcontentloaded", timeout=10000)
 
-        # 5. Логируем успех - клик прошел, курс открывается
-        self.log.info(f"Клик выполнен. Открывается курс. URL до клика: {url_before}")
+        self.log.info(f"Курс открыт в новой вкладке: {new_page.url}")
+
+        # Возвращаем новую страницу для дальнейших проверок
+        return new_page
