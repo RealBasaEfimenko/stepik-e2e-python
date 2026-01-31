@@ -1,4 +1,3 @@
-
 # ========== НАСТРОЙКИ Pytest ==========
 [tool.pytest]
 testpaths = ["tests"]
@@ -14,12 +13,16 @@ addopts = [
     "--show-capture=no",
     "--disable-warnings",
     "-p", "no:warnings",
+    "--reruns=1",              # Перезапуск 1 раз при флакинессе (важно для CI!)
+    "--reruns-delay=2",        # Пауза 2 секунды перед перезапуском
+    "--timeout=120",           # Глобальный таймаут на тест (2 минуты)
 ]
 
 markers = [
     "ui: Тесты пользовательского интерфейса",
     "smoke: Быстрые smoke-тесты",  
     "auth: Тесты авторизации",
+    "flaky: Нестабильные тесты требующие перезапуска",
 ]   
 
 log_cli = true
@@ -30,10 +33,13 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 # ========== НАСТРОЙКИ Playwright ==========
 [tool.pytest.playwright]
 browser = ["chromium"]
-headed = true
+headed = false              # В CI должен быть headless=true (false в headed)
 viewport = {width = 1280, height = 1024}
-trace = "on-first-retry"
+trace = "retain-on-failure" # Сохранять trace только при падении (экономия места)
 screenshot = "only-on-failure"
+video = "retain-on-failure" # Видео только при падении
+action-timeout = 15000      # Таймаут на действие (клик, ввод) - увеличен для CI
+navigation-timeout = 30000  # Таймаут на навигацию
 
 # ========== НАСТРОЙКИ Allure ==========
 [tool.pytest.allure]
