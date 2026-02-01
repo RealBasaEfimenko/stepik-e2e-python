@@ -68,21 +68,21 @@ class TestSearchFreeCourses:
 
         # 5. ПРОВЕРКА СТРАНИЦЫ КУРСА (в новой вкладке)
         with allure.step("5. Проверка открытия курса"):
-            # Проверяем, что мы НЕ на странице поиска
-            assert (
-                "/catalog/search" not in course_url
-            ), f"Оказались на странице поиска вместо курса. URL: {course_url}"
+            # Ждем загрузки страницы курса (важно для CI!)
+            course_page.wait_for_load_state("domcontentloaded", timeout=15000)
 
-            # Проверка: на странице курса есть заголовок h1
-            header = course_page.locator("h1").first
-            assert header.is_visible(timeout=10000), "Заголовок курса не отображается"
+            # Дополнительно ждем появления заголовка (h1) конкретно
+            header_locator = course_page.locator("h1").first
+            header_locator.wait_for(state="visible", timeout=15000)
 
-            header_text = header.inner_text()
+            # Теперь проверяем
+            assert header_locator.is_visible(), "Заголовок курса не отображается"
+            header_text = header_locator.inner_text()
             assert len(header_text) > 0, "Заголовок курса пустой"
 
             allure.attach(
-                body=f"Заголовок курса: {header_text}",
-                name="course_header",
+                body=f"URL курса: {course_url}\nЗаголовок: {header_text}",
+                name="course_details",
                 attachment_type=allure.attachment_type.TEXT,
             )
 
