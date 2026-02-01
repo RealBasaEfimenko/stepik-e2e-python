@@ -32,39 +32,53 @@ jobs:
           STEPIK_LOGIN: ${{ secrets.STEPIK_LOGIN }}
           STEPIK_PASSWORD: ${{ secrets.STEPIK_PASSWORD }}
 
-      - name: Upload Allure results (always)
-        if: always() # ВАЖНО: сохраняем даже при падении
+      - name: Check Allure results exists
+        if: always()
+        run: |
+          ls -la allure-results/ || echo "Directory allure-results not found"
+          find . -name "allure-results" -type d || echo "Searching for allure-results..."
+
+      - name: Upload Allure results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: allure-results/
+          path: ./allure-results
           retention-days: 7
+          if-no-files-found: warn # Не падаем если файлов нет, но показываем warning
 
   allure-report:
     name: Generate Allure report
-    needs: tests
+    needs: tests # Зависимость от первого job
     runs-on: ubuntu-latest
-    if: always() # Генерируем отчет всегда
+    if: always() # Выполняем даже если tests упал
 
     steps:
       - name: Download Allure results
         uses: actions/download-artifact@v4
         with:
           name: allure-results
-          path: allure-results
+          path: ./allure-results
+
+      - name: Check downloaded files
+        run: |
+          ls -la ./allure-results/ || echo "No files downloaded"
 
       - name: Install Allure CLI
         run: |
           wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
           tar -zxf allure-2.27.0.tgz -C /opt/
           sudo ln -sf /opt/allure-2.27.0/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Generate Allure report
-        run: allure generate allure-results -o allure-report --clean
+        run: |
+          allure generate ./allure-results -o ./allure-report --clean
+          echo "Allure report generated"
 
       - name: Upload Allure report
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: allure-report
+          path: ./allure-report
           retention-days: 30
