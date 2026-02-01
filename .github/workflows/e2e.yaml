@@ -27,34 +27,46 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Run tests
+        id: run_tests
+        continue-on-error: true
         run: pytest tests -v --timeout=120
         env:
           STEPIK_LOGIN: ${{ secrets.STEPIK_LOGIN }}
           STEPIK_PASSWORD: ${{ secrets.STEPIK_PASSWORD }}
 
-      - name: Check Allure results exists
+      - name: Ensure allure-results exists
         if: always()
         run: |
-          ls -la allure-results/ || echo "Directory allure-results not found"
-          find . -name "allure-results" -type d || echo "Searching for allure-results..."
+          mkdir -p allure-results
+          echo "Checked allure-results directory"
+
+      - name: Check Allure results
+        if: always()
+        run: |
+          ls -la allure-results/ 2>/dev/null || echo "Warning: allure-results is empty or not found"
 
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: ./allure-results
+          path: allure-results/**
           retention-days: 7
-          if-no-files-found: warn # Не падаем если файлов нет, но показываем warning
+          if-no-files-found: warn
+
+      - name: Fail job if tests failed
+        if: steps.run_tests.outcome == 'failure'
+        run: exit 1
 
   allure-report:
     name: Generate Allure report
-    needs: tests # Зависимость от первого job
+    needs: tests
     runs-on: ubuntu-latest
-    if: always() # Выполняем даже если tests упал
+    if: always()
 
     steps:
       - name: Download Allure results
+        id: download
         uses: actions/download-artifact@v4
         with:
           name: allure-results
@@ -62,19 +74,25 @@ jobs:
 
       - name: Check downloaded files
         run: |
-          ls -la ./allure-results/ || echo "No files downloaded"
+          ls -la ./allure-results/ || echo "No files in allure-results"
 
       - name: Install Allure CLI
         run: |
-          wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+          wget -q https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz 
           tar -zxf allure-2.27.0.tgz -C /opt/
           sudo ln -sf /opt/allure-2.27.0/bin/allure /usr/local/bin/allure
           allure --version
 
       - name: Generate Allure report
         run: |
-          allure generate ./allure-results -o ./allure-report --clean
-          echo "Allure report generated"
+          if [ -d "./allure-results" ] && [ "$(ls -A ./allure-results)" ]; then
+            allure generate ./allure-results -o ./allure-report --clean
+            echo "Allure report generated"
+          else
+            echo "No allure results to generate report"
+            mkdir -p ./allure-report
+            echo "Empty report" > ./allure-report/empty.txt
+          fi
 
       - name: Upload Allure report
         uses: actions/upload-artifact@v4

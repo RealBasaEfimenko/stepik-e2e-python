@@ -26,7 +26,7 @@ class BasePage:
         Ожидать завершения всех сетевых запросов
         """
         self.log.debug("Ожидание завершения сетевых запросов.")
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_load_state("domcontentloaded")
 
     def navigate(self, url: str) -> Optional[Response]:
         """
