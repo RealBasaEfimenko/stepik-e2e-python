@@ -23,48 +23,47 @@ class BasePage:
 
     def _wait_for_all_requests(self) -> None:
         """
-        Ожидать завершения всех сетевых запросов
+        Ожидать завершения загрузки DOM (избегаем networkidle для CI)
         """
-        self.log.debug("Ожидание завершения сетевых запросов.")
+        self.log.debug("Ожидание загрузки DOM.")
         self.page.wait_for_load_state("domcontentloaded")
 
     def navigate(self, url: str) -> Optional[Response]:
         """
         Переход по URL с логированием
 
-
         :param url: Полный URL для перехода
         :return: Response object или None
-
         """
         self.log.info("Навигация по URL", url=url)
-        response = self.page.goto(url, wait_until="networkidle", timeout=self.timeout)
+        # ИСПРАВЛЕНО: domcontentloaded вместо networkidle для CI
+        response = self.page.goto(url, wait_until="domcontentloaded", timeout=self.timeout)
         return response
 
     def click(self, locator: Locator, element_description: str) -> None:
-        """Клик по элементу с ожиданием и логированием
+        """Клик по элементу с логированием
 
         Args:
             locator : Локатор playwright
             element_description (str): Человекочитаемое описание элемента для логов
         """
-        self.log.info(f"Клик по элементу, {element_description}")
-
+        self.log.info(f"Клик по элементу: {element_description}")
         locator.click(timeout=self.timeout)
-        self._wait_for_all_requests()
-
+        # ИСПРАВЛЕНО: Не ждем networkidle после клика (SPA не перезагружает страницу полностью)
+        # Просто даем небольшую паузу для стабильности в CI (500мс)
+        self.page.wait_for_timeout(500)
         self.log.info(f"Успешный клик: {element_description}", current_url=self.page.url)
 
     def fill(self, locator: Locator, text: str, element_description: str) -> None:
         """Заполнение поля с логированием
 
         Args:
-            locator: Локтор Playwright
+            locator: Локатор Playwright
             text: Текст для ввода
             element_description: Описание поля
         """
         self.log.info(
-            f"Заполняю поля: {element_description}",
+            f"Заполняю поле: {element_description}",
             text=text[:10] + "..." if len(text) > 10 else text,
         )
 
@@ -81,12 +80,12 @@ class BasePage:
         self.log.debug("Текущий URL", url=url)
         return url
 
-    def wait_for_url(self, url_pattern: str, timeout: Optional[float]) -> None:
+    def wait_for_url(self, url_pattern: str, timeout: Optional[float] = None) -> None:
         """
         Ожидание перехода на URL по паттерну
 
-        :param url_pattern: Паттерн URL для ожидания(может быть частью URL)
-        :param timeout: Кастомный таймаут
+        :param url_pattern: Паттерн URL для ожидания (может быть частью URL)
+        :param timeout: Кастомный таймаут (если None, используется self.timeout)
         """
         timeout = self.timeout if timeout is None else timeout
         self.log.info("Ожидание URL", pattern=url_pattern)
@@ -120,4 +119,3 @@ class BasePage:
         screenshot_path = f"screenshots/{name}.png"
         os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
         self.page.screenshot(path=screenshot_path)
-        self.log.info("Скриншот сохранен", path=screenshot_path)
