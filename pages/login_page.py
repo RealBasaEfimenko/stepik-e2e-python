@@ -47,40 +47,43 @@ class LoginPage(BasePage):
 
     @allure.step("Авторизация пользователя {email}")
     def login(self, email: str, password: str) -> None:
-        """Полный процесс авторизации с принудительной очисткой состояния."""
+        """Полный процесс авторизации."""
         self.log.info("Начало процесса авторизации", email=email[:3] + "***")
 
         # 1. Открываем и заполняем форму
         self.open()
         self.enter_email(email)
         self.enter_password(password)
-        self.submit_login()
 
-        # 2. Ждем редиректа после авторизации (не более 15 сек)
+        # 2. Отправляем форму и ждем завершения запроса на сервер
+        # (playwright ждет ответа сервера, а не просто клика)
+        with self.page.expect_response("**/auth/**", timeout=10000) as response_info:
+            self.submit_login()
+
+        response = response_info.value
+        self.log.info("Получен ответ авторизации", status=response.status)
+
+        # 3. Ждем редиректа на каталог (не более 10 сек)
         try:
-            self.page.wait_for_url("**/catalog", timeout=15000)
-            self.log.info("Редирект на каталог произошел автоматически")
-        except Exception as e:
-            self.log.warning(
-                "Редирект не произошел автоматически, принудительно переходим", error=str(e)
-            )
+            self.page.wait_for_url("**/catalog*", timeout=10000)
+        except Exception:
+            self.log.info("Не дождались редайректа")
 
-        # 3. Принудительно переходим на чистый каталог (без auth=login)
-        # ВАЖНО: используем domcontentloaded вместо networkidle для CI
-        clean_catalog_url = "https://stepik.org/catalog"
-        self.page.goto(clean_catalog_url, wait_until="domcontentloaded", timeout=60000)
+        # 4. Проверяем финальный URL
+        current_url = self.get_current_url()
+        self.log.info(f"URL после авторизации: {current_url}")
 
-        # 4. Ждем появления ключевого элемента каталога (поисковой строки) вместо networkidle
-        try:
-            self.page.get_by_placeholder("Название курса, автор или предмет").wait_for(
-                state="visible", timeout=15000
-            )
-            self.log.info("Каталог загружен (поисковая строка видна)")
-        except Exception as e:
-            self.log.error("Поисковая строка не появилась", error=str(e))
-            raise
-        final_url = self.get_current_url()
-        self.log.info("Авторизация завершена", final_url=final_url)
+        # Если мы на catalog без auth=login - успех
+        if "/catalog" in current_url and "auth=login" not in current_url:
+            self.log.info("Авторизация успешна")
+            return
+
+        # Если все еще на auth=login - провал
+        if "auth=login" in current_url:
+            self.log.error("Авторизация не удалось: остались на странице логина")
+            raise Exception("Login failed: session not created")
+
+        self.log.info("Авторизация завершена", final_url=current_url)
 
     def is_login_successful(self) -> bool:
         """
